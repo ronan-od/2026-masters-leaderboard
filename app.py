@@ -117,7 +117,7 @@ def get_live_masters_data():
                 "today": today_val,
                 "thru": status_obj.get('thru', display_status),
                 "state": state,
-                "r1_par": par_scores.get('r1'), "r2_par": par_scores.get('r2'), "r3_par": par_scores.get('r3'), "r4_par": par_scores.get('r4'),
+                "r1": scores.get('r1', '-'), "r2": scores.get('r2', '-'), "r3": scores.get('r3', '-'), "r4": scores.get('r4', '-'),
                 "tee": display_status
             }
         return data_map
@@ -189,7 +189,7 @@ for team in team_summaries:
         tot_style, tot_txt = get_score_meta(p['p_total'])
         status = f"<span class='tee-time'>{p['thru']}</span>" if p['state'] == 'pre' else f"<span class='badge'>{p['thru']}</span>"
         rows += f"<tr><td class='p-name'>{p['name']}</td><td class='{t_style}'>{t_txt}</td><td>{status}</td><td>{format_round_score(p['r1'], p.get('r1_par'))}</td><td>{format_round_score(p['r2'], p.get('r2_par'))}</td><td>{format_round_score(p['r3'], p.get('r3_par'))}</td><td>{format_round_score(p['r4'], p.get('r4_par'))}</td><td class='{tot_style}'>{tot_txt}</td></tr>"
-        
+
     # WRAPPED IN responsive-table DIV FOR MOBILE SCROLLING
     st.markdown(f"""
     <div class="table-container">
