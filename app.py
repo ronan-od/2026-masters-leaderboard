@@ -107,12 +107,11 @@ def get_live_masters_data():
             elif status_obj.get('type', {}).get('state') == 'post' or "final" in display_status.lower():
                 state = 'post'
                 display_status = "Final"
-            score_display = c.get('score', {}).get('displayValue', 'E')
-            if score_display == 'E':
-                today_val = 0
+            if par_scores:
+                current_key = f"r{max(int(k[1:]) for k in par_scores)}"
+                today_val = par_scores[current_key]
             else:
-                try: today_val = int(score_display.replace('+', ''))
-                except: today_val = 0
+                today_val = 0
             data_map[name] = {
                 "today": today_val,
                 "thru": status_obj.get('thru', display_status),
