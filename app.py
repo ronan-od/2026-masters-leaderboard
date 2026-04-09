@@ -118,6 +118,7 @@ def get_live_masters_data():
                 "thru": status_obj.get('thru', display_status),
                 "state": state,
                 "r1": scores.get('r1', '-'), "r2": scores.get('r2', '-'), "r3": scores.get('r3', '-'), "r4": scores.get('r4', '-'),
+                "r1_par": par_scores.get('r1'), "r2_par": par_scores.get('r2'), "r3_par": par_scores.get('r3'), "r4_par": par_scores.get('r4'),
                 "tee": display_status
             }
         return data_map
