@@ -91,7 +91,15 @@ def get_live_masters_data():
         data_map = {}
         for c in competitors:
             name = c['athlete']['displayName']
-            scores = {f"r{r['period']}": str(int(r['value'])) for r in c.get('linescores', []) if 'value' in r}
+            scores = {}
+            par_scores = {}
+            for r in c.get('linescores', []):
+                if 'value' in r:
+                    period = r['period']
+                    scores[f"r{period}"] = str(int(r['value']))
+                    disp = r.get('displayValue', 'E')
+                    try: par_scores[f"r{period}"] = 0 if disp == 'E' else int(disp.replace('+', ''))
+                    except: par_scores[f"r{period}"] = 0
             status_obj = c['status']
             display_status = status_obj.get('type', {}).get('detail', '-')
             state = 'in'
@@ -109,18 +117,18 @@ def get_live_masters_data():
                 "today": today_val,
                 "thru": status_obj.get('thru', display_status),
                 "state": state,
-                "r1": scores.get('r1', '-'), "r2": scores.get('r2', '-'), "r3": scores.get('r3', '-'), "r4": scores.get('r4', '-'),
+                "r1_par": par_scores.get('r1'), "r2_par": par_scores.get('r2'), "r3_par": par_scores.get('r3'), "r4_par": par_scores.get('r4'),
                 "tee": display_status
             }
         return data_map
     except: return {}
 
 # --- 4. HELPERS ---
-def format_round_score(score_str):
+def format_round_score(score_str, par=None):
     if score_str in ["-", "0", "None"]: return "-"
     try:
         score = int(score_str)
-        delta = score - 72
+        delta = par if par is not None else score - 72
         if delta < 0: return f"{score}<br><span class='score-under delta-text'>({delta})</span>"
         if delta > 0: return f"{score}<br><span class='score-over delta-text'>(+{delta})</span>"
         return f"{score}<br><span class='score-par delta-text'>(E)</span>"
@@ -135,11 +143,12 @@ def get_score_meta(val):
 def calculate_best_4(team_players):
     total_delta = 0
     for r_key in ['r1', 'r2', 'r3', 'r4']:
+        par_key = f"{r_key}_par"
         deltas = []
         for p in team_players:
-            val = p.get(r_key)
-            if val and val != "-": deltas.append(int(val) - 72)
-            elif p['state'] == 'in' and any(tp.get(r_key) != "-" for tp in team_players): deltas.append(0)
+            val = p.get(par_key)
+            if val is not None: deltas.append(val)
+            elif p['state'] == 'in' and any(tp.get(par_key) is not None for tp in team_players): deltas.append(0)
         if deltas:
             deltas.sort()
             while len(deltas) < 4: deltas.append(0)
@@ -156,8 +165,8 @@ for owner, roster in TEAMS.items():
         p_data = master_db.get(p_name)
         if not p_data:
             p_data = next((v for k, v in master_db.items() if p_name in k or k in p_name), None)
-        raw = p_data or {"today": 0, "state": "pre", "thru": "-", "r1": "-", "r2": "-", "r3": "-", "r4": "-", "tee": "TBD"}
-        p_total = sum((int(raw[r]) - 72) for r in ['r1', 'r2', 'r3', 'r4'] if raw[r] != "-")
+        raw = p_data or {"today": 0, "state": "pre", "thru": "-", "r1": "-", "r2": "-", "r3": "-", "r4": "-", "tee": "TBD", "r1_par": None, "r2_par": None, "r3_par": None, "r4_par": None}
+        p_total = sum(raw[f"r{i}_par"] for i in range(1, 5) if raw.get(f"r{i}_par") is not None)
         processed.append(raw | {"name": p_name, "p_total": p_total})
     team_summaries.append({"owner": owner, "total": calculate_best_4(processed), "players": sorted(processed, key=lambda x: x['p_total'])})
 
@@ -179,8 +188,8 @@ for team in team_summaries:
         t_style, t_txt = get_score_meta(p['today'])
         tot_style, tot_txt = get_score_meta(p['p_total'])
         status = f"<span class='tee-time'>{p['thru']}</span>" if p['state'] == 'pre' else f"<span class='badge'>{p['thru']}</span>"
-        rows += f"<tr><td class='p-name'>{p['name']}</td><td class='{t_style}'>{t_txt}</td><td>{status}</td><td>{format_round_score(p['r1'])}</td><td>{format_round_score(p['r2'])}</td><td>{format_round_score(p['r3'])}</td><td>{format_round_score(p['r4'])}</td><td class='{tot_style}'>{tot_txt}</td></tr>"
-    
+        rows += f"<tr><td class='p-name'>{p['name']}</td><td class='{t_style}'>{t_txt}</td><td>{status}</td><td>{format_round_score(p['r1'], p.get('r1_par'))}</td><td>{format_round_score(p['r2'], p.get('r2_par'))}</td><td>{format_round_score(p['r3'], p.get('r3_par'))}</td><td>{format_round_score(p['r4'], p.get('r4_par'))}</td><td class='{tot_style}'>{tot_txt}</td></tr>"
+        
     # WRAPPED IN responsive-table DIV FOR MOBILE SCROLLING
     st.markdown(f"""
     <div class="table-container">
