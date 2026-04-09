@@ -84,15 +84,14 @@ st.markdown("""
 # --- 3. LIVE DATA CONNECTION ---
 @st.cache_data(ttl=60)
 def get_live_masters_data():
-    url = "https://site.api.espn.com/apis/site/v2/sports/golf/leaderboard?event=401581079"
+    url = "https://site.api.espn.com/apis/site/v2/sports/golf/leaderboard?event=401811941"
     try:
         resp = requests.get(url).json()
-        competitors = resp['competitions'][0]['competitors']
+        competitors = resp['events'][0]['competitions'][0]['competitors']
         data_map = {}
         for c in competitors:
             name = c['athlete']['displayName']
-            rounds = [r.get('value', 0) for r in c.get('linescores', [])]
-            scores = {f"r{i+1}": str(rounds[i]) for i in range(len(rounds))}
+            scores = {f"r{r['period']}": str(int(r['value'])) for r in c.get('linescores', []) if 'value' in r}
             status_obj = c['status']
             display_status = status_obj.get('type', {}).get('detail', '-')
             state = 'in'
@@ -100,8 +99,14 @@ def get_live_masters_data():
             elif status_obj.get('type', {}).get('state') == 'post' or "final" in display_status.lower():
                 state = 'post'
                 display_status = "Final"
+            score_display = c.get('score', {}).get('displayValue', 'E')
+            if score_display == 'E':
+                today_val = 0
+            else:
+                try: today_val = int(score_display.replace('+', ''))
+                except: today_val = 0
             data_map[name] = {
-                "today": c.get('score', {}).get('value', 0),
+                "today": today_val,
                 "thru": status_obj.get('thru', display_status),
                 "state": state,
                 "r1": scores.get('r1', '-'), "r2": scores.get('r2', '-'), "r3": scores.get('r3', '-'), "r4": scores.get('r4', '-'),
